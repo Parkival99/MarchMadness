@@ -1,3 +1,5 @@
 streamlit
 pandas
 pyarrow
+matplotlib
+numpy
