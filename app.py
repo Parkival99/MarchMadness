@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import base64
 
 st.set_page_config(page_title="March Madness Model", layout="wide")
 
@@ -26,7 +25,7 @@ with header_col2:
 # Load data
 # ----------------------------
 
-df = pd.read_parquet("data/model_dataset2.parquet")
+df = pd.read_parquet("model_dataset2.parquet")
 tour = pd.read_csv("march_model26.csv")
 
 df["Team"] = df["Team"].str.replace("\xa0","").str.strip()
