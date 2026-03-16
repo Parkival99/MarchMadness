@@ -176,12 +176,11 @@ def simulate_game(teamA, teamB):
 
     return teamA if np.random.random() < p else teamB
 
-
 # ----------------------------
 # Tabs
 # ----------------------------
 
-tab1, tab2 = st.tabs(["Model Rankings","Bracket Projection"])
+tab1, tab2, tab3 = st.tabs(["Model Rankings","Bracket Projection", "Upset Finder & Simulator"])
 
 # ====================================================
 # TAB 1
@@ -295,8 +294,63 @@ with tab2:
     (1,16),(8,9),(5,12),(4,13),
     (6,11),(3,14),(7,10),(2,15)
     ]
+    
+    def get_score(team):
+        # Handle play-in teams like "Boise State/Colorado"
+        if "/" in team:
+    
+            t1, t2 = team.split("/")
+    
+            s1 = df[df.Team==t1]["Score"]
+            s2 = df[df.Team==t2]["Score"]
+    
+            s1 = s1.values[0] if len(s1) > 0 else 0
+            s2 = s2.values[0] if len(s2) > 0 else 0
+    
+            return max(s1, s2)
+    
+        else:
+    
+            s = df[df.Team==team]["Score"]
+    
+            if len(s) == 0:
+                return 0
+    
+            return s.values[0]
+    
+    def slot_win_prob(s1,s2):
+        return 1/(1+np.exp(-(s1-s2)/8))
 
-    sweet16 = []
+    def seed_slot(region_df, seed):
+
+        teams = region_df[region_df.Seed==seed]
+
+        if len(teams) == 1:
+
+            team = teams.iloc[0]["Team"]
+            score = get_score(team)
+
+            return team, score
+
+        elif len(teams) == 2:
+
+            t1 = teams.iloc[0]["Team"]
+            t2 = teams.iloc[1]["Team"]
+
+            team_string = f"{t1}/{t2}"
+
+            score = max(get_score(t1), get_score(t2))
+
+            return team_string, score
+
+        else:
+            return "Unknown", 0
+
+    # ----------------------------
+    # Round of 64
+    # ----------------------------
+
+    round32 = []
 
     for region in regions:
 
@@ -319,8 +373,135 @@ with tab2:
 
             winners.append(winner)
 
-        sweet16.extend(winners)
+        round32.append(winners)
 
+    # ----------------------------
+    # Round of 32
+    # ----------------------------
+
+    st.subheader("Round of 32")
+
+    sweet16 = []
+
+    for region_winners in round32:
+
+        winners = []
+
+        for i in range(0,8,2):
+
+            t1 = region_winners[i]
+            t2 = region_winners[i+1]
+
+            s1 = get_score(t1)
+            s2 = get_score(t2)
+
+            p = slot_win_prob(s1,s2)
+
+            winner = t1 if p>.5 else t2
+
+            st.write(f"{t1} vs {t2} → **{winner}**")
+
+            winners.append(winner)
+
+        sweet16.append(winners)
+
+    # ----------------------------
+    # Sweet 16
+    # ----------------------------
+
+    st.subheader("Sweet 16")
+
+    elite8 = []
+
+    for region in sweet16:
+
+        winners = []
+
+        for i in range(0,4,2):
+
+            t1 = region[i]
+            t2 = region[i+1]
+
+            s1 = get_score(t1)
+            s2 = get_score(t2)
+
+            p = slot_win_prob(s1,s2)
+
+            winner = t1 if p>.5 else t2
+
+            st.write(f"{t1} vs {t2} → **{winner}**")
+
+            winners.append(winner)
+
+        elite8.append(winners)
+
+    # ----------------------------
+    # Elite 8
+    # ----------------------------
+
+    st.subheader("Elite 8")
+
+    final4 = []
+
+    for region in elite8:
+
+        t1 = region[0]
+        t2 = region[1]
+
+        s1 = get_score(t1)
+        s2 = get_score(t2)
+
+        p = slot_win_prob(s1,s2)
+
+        winner = t1 if p>.5 else t2
+
+        st.write(f"{t1} vs {t2} → **{winner}**")
+
+        final4.append(winner)
+
+    # ----------------------------
+    # Final Four
+    # ----------------------------
+
+    st.subheader("Final Four")
+
+    championship = []
+
+    for i in range(0,4,2):
+
+        t1 = final4[i]
+        t2 = final4[i+1]
+
+        s1 = get_score(t1)
+        s2 = get_score(t2)
+
+        p = slot_win_prob(s1,s2)
+
+        winner = t1 if p>.5 else t2
+
+        st.write(f"{t1} vs {t2} → **{winner}**")
+
+        championship.append(winner)
+
+    # ----------------------------
+    # Championship
+    # ----------------------------
+
+    st.subheader("National Championship")
+
+    t1 = championship[0]
+    t2 = championship[1]
+
+    s1 = get_score(t1)
+    s2 = get_score(t2)
+
+    p = slot_win_prob(s1,s2)
+
+    champ = t1 if p>.5 else t2
+
+    st.write(f"{t1} vs {t2} → 🏆 **{champ}**")
+
+with tab3:
     # ------------------------
     # Upset detection
     # ------------------------
