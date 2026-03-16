@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import base64
 
 st.set_page_config(page_title="March Madness Model", layout="wide")
 
@@ -27,18 +28,22 @@ with header_col2:
 
 df = pd.read_parquet("model_dataset2.parquet")
 tour = pd.read_csv("march_model26.csv")
+mascot = pd.read_csv("march_model26mascot.csv")
 
 df["Team"] = df["Team"].str.replace("\xa0","").str.strip()
 tour["Team"] = tour["Team"].str.replace("\xa0","").str.strip()
 
 df = df.merge(tour[["Team","Seed","Region","Conf"]], on="Team")
 
+mascot["Team"] = mascot["Team"].str.replace("\xa0","").str.strip()
+df = df.merge(mascot, on="Team", how="left")
+
 # ----------------------------
 # Numeric cleanup
 # ----------------------------
 
 numeric_cols = [
-"AdjOE_x","AdjDE_x","3P%","2P%","FT%","AdjTempo"
+"AdjOE_x","AdjDE_x","3P%","2P%","FT%","AdjTempo", "PowerRating"
 ]
 
 for col in numeric_cols:
@@ -79,7 +84,7 @@ df["ConfStrength"] = df["Conf"].map(conf_strength).fillna(0)
 
 features = [
 "AdjOE_x","AdjDE_x","NetEff","3P%","2P%","FT%",
-"TempoBalance","ConfStrength"
+"TempoBalance","ConfStrength", "PowerRating"
 ]
 
 for col in features:
@@ -99,8 +104,9 @@ w_2p = st.sidebar.slider("2PT Shooting",0,100,15)
 w_ft = st.sidebar.slider("Free Throw %",0,100,5)
 w_tempo = st.sidebar.slider("Balanced Tempo",0,100,5)
 w_conf = st.sidebar.slider("Conference Strength",0,100,10)
+w_mascot = st.sidebar.slider("Mascot Power",0,100,0)
 
-weights = [w_net,w_adjo,w_adjd,w_3p,w_2p,w_ft,w_tempo,w_conf]
+weights = [w_net,w_adjo,w_adjd,w_3p,w_2p,w_ft,w_tempo,w_conf,w_mascot]
 total = sum(weights)
 
 if total == 0:
@@ -114,6 +120,7 @@ w_2p/=total
 w_ft/=total
 w_tempo/=total
 w_conf/=total
+w_mascot /= total
 
 # ----------------------------
 # Score calculation
@@ -128,6 +135,7 @@ w_net * df["NetEff_z"]
 + w_ft * df["FT%_z"]
 + w_tempo * df["TempoBalance_z"]
 + w_conf * df["ConfStrength_z"]
++ w_mascot * df["PowerRating_z"]
 )
 
 df["Score"] = df["Score"] * 25 + 50
